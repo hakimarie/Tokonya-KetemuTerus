@@ -51,9 +51,17 @@
             body * { visibility: hidden; }
             #printStrukArea, #printStrukArea * { visibility: visible; }
             #printStrukArea { 
-                display: block; position: absolute; left: 0; top: 0; 
-                width: 58mm; font-family: 'Courier New', Courier, monospace; 
-                font-size: 12px; color: #000; padding: 10px 5px; 
+                display: block; 
+                position: absolute; 
+                left: 50%; /* Posisikan ke tengah */
+                top: 0; 
+                transform: translateX(-50%); /* Geser balik setengah lebar struk */
+                width: 58mm; 
+                font-family: 'Courier New', Courier, monospace; 
+                font-size: 12px; 
+                color: #000; 
+                padding: 15px; /* Tambahin margin/padding */
+                margin: 0 auto;
             }
         }
     </style>
@@ -87,7 +95,7 @@
         // =========================================================================
         // URL WEB APP GOOGLE APPS SCRIPT (DEPLOYS SCRIPT KLIEN)
         // =========================================================================
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxF-NXMmDbP7EVEUCJlidKPNjB0c6KzYmwRRpJHRWz4_ZUdS3uFl57o-2SBLLTLlORW/exec';
+        const SCRIPT_URL = 'GANTI DENGAN WEB URL HASIL DEPLOY';
     </script>
 
     <!-- Mobile Sidebar Overlay -->
@@ -773,6 +781,40 @@
     <!-- MODALS SECTION -->
     <!-- ========================================== -->
     
+    <!-- Modal Konfirmasi Hapus Produk -->
+    <div id="deleteProductModal" class="fixed inset-0 z-[120] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeDeleteProductModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center px-4 py-8">
+            <div class="relative z-10 w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
+                <div class="p-6 sm:p-7 text-center">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mb-5 shadow-sm">
+                        <i data-lucide="trash-2" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Hapus Produk?</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        Produk <span id="deleteProductName" class="font-bold text-slate-800">ini</span> akan dihapus dari katalog.
+                    </p>
+                    <div class="mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-100 text-left">
+                        <div class="flex items-start gap-2.5">
+                            <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                            <p class="text-[11px] leading-relaxed text-amber-700">Pastikan produk ini memang sudah tidak digunakan sebelum melanjutkan.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 p-4 sm:p-5 bg-slate-50 border-t border-slate-100">
+                    <button type="button" id="btnCancelDeleteProduct" onclick="closeDeleteProductModal()" class="w-full py-3 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-100 transition-colors">
+                        Batal
+                    </button>
+                    <button type="button" id="btnConfirmDeleteProduct" onclick="confirmDeleteProduct()" class="w-full py-3 px-4 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 flex items-center justify-center gap-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span id="btnConfirmDeleteProductText">Hapus Produk</span>
+                        <i data-lucide="loader-2" id="btnConfirmDeleteProductLoader" class="w-4 h-4 animate-spin hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Add/Edit Product -->
     <div id="productModal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('productModal')"></div>
@@ -1122,9 +1164,52 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- AREA CETAK STRUK THERMAL (HIDDEN) -->
+    <!-- ========================================== -->
+    <div id="printStrukArea">
+        <div style="text-align:center; margin-bottom:10px;">
+            <div id="strLogoContainer" style="display:none; margin-bottom:5px;">
+                <img id="strLogoImg" src="" style="max-height: 40px; max-width: 40px; object-fit: contain; margin: 0 auto;">
+            </div>
+            <h2 id="strNamaToko" style="margin:0; font-size:16px;">NAMA TOKO</h2>
+            <p id="strInfoToko" style="margin:0; font-size:10px;"></p>
+        </div>
+        <div style="border-bottom:1px dashed #000; margin-bottom:5px; padding-bottom:5px;">
+            <p style="margin:0;">No: <span id="strOrderId"></span></p>
+            <p style="margin:0;">Tgl: <span id="strDate"></span></p>
+            <p style="margin:0;">Ksr: <span id="strKasir"></span></p>
+            <p style="margin:0;">Plg: <span id="strPelanggan"></span></p>
+        </div>
+        <div id="strItems" style="border-bottom:1px dashed #000; margin-bottom:5px; padding-bottom:5px;"></div>
+        <div style="border-bottom:1px dashed #000; margin-bottom:5px; padding-bottom:5px;">
+            <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span id="strSubtotal"></span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Ongkir:</span><span id="strOngkir"></span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Diskon:</span><span id="strDiskon"></span></div>
+            <div id="strPpnRow" style="display:none; justify-content:space-between;"><span>PPN:</span><span id="strPpn"></span></div>
+            <div id="strServiceRow" style="display:none; justify-content:space-between;"><span>Layanan:</span><span id="strService"></span></div>
+        </div>
+        <div style="border-bottom:1px dashed #000; margin-bottom:5px; padding-bottom:5px;">
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;"><span>Total:</span><span id="strTotal"></span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Bayar (<span id="strMethod"></span>):</span><span id="strTunai"></span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Kembali:</span><span id="strKembali"></span></div>
+        </div>
+        <div style="text-align:center; margin-top:10px;">
+            <p style="margin:0;">Terima Kasih!</p>
+            <p style="margin:0; font-size:9px;">Powered by iMersWAstore</p>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- JAVASCRIPT LOGIC -->
+    <!-- ========================================== -->
     <script>
-        lucide.createIcons();
+        // Fungsi aman untuk inisialisasi Ikon Lucide
+        function refreshIcons() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
         
         let articleQuill;
         
@@ -1198,16 +1283,17 @@
                 avatarEl.innerHTML = (currentUser.nama_toko || 'U').charAt(0);
             }
 
+            // SINGLE STORE: status toko selalu aktif.
+            // Status approved/pending hanya berlaku untuk akun staf/kasir, bukan status toko.
             const badge = document.getElementById('statusBadge');
             if (badge) {
-                badge.classList.remove('hidden');
-                if (currentUser.status === 'approved') {
-                    badge.innerText = 'Toko Aktif'; 
-                    badge.classList.add('bg-green-100', 'text-green-700');
-                } else {
-                    badge.innerText = 'Pending'; 
-                    badge.classList.add('bg-amber-100', 'text-amber-700');
-                }
+                badge.innerText = 'Toko Aktif';
+                badge.classList.remove(
+                    'hidden',
+                    'bg-amber-100', 'text-amber-700',
+                    'bg-red-100', 'text-red-700'
+                );
+                badge.classList.add('bg-green-100', 'text-green-700');
             }
 
             document.getElementById('btnLihatToko').onclick = () => window.open('index.html', '_blank');
@@ -1590,6 +1676,66 @@
                     <td class="px-4 py-4 text-right whitespace-nowrap"><button onclick="openProductModal('${p.id}')" class="text-blue-500 hover:text-blue-700 text-xs font-medium mr-2">Edit</button><button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</button></td>
                 </tr>`;
             }).join('');
+        }
+
+        // ==========================================
+        // HAPUS PRODUK - CUSTOM MODAL
+        // ==========================================
+        let pendingDeleteProductId = null;
+        let isDeletingProduct = false;
+
+        function deleteProduct(id) {
+            if (!id) {
+                showGlobalAlert('ID produk tidak valid.', false);
+                return;
+            }
+
+            pendingDeleteProductId = id;
+            const product = globalProducts.find(p => String(p.id) === String(id));
+            const nameEl = document.getElementById('deleteProductName');
+            if (nameEl) nameEl.innerText = product?.name || 'produk ini';
+
+            document.getElementById('deleteProductModal')?.classList.remove('hidden');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function closeDeleteProductModal() {
+            if (isDeletingProduct) return;
+            document.getElementById('deleteProductModal')?.classList.add('hidden');
+            pendingDeleteProductId = null;
+        }
+
+        async function confirmDeleteProduct() {
+            if (!pendingDeleteProductId || isDeletingProduct) return;
+
+            const btn = document.getElementById('btnConfirmDeleteProduct');
+            const textEl = document.getElementById('btnConfirmDeleteProductText');
+            const loader = document.getElementById('btnConfirmDeleteProductLoader');
+            const cancelBtn = document.getElementById('btnCancelDeleteProduct');
+
+            isDeletingProduct = true;
+            if (btn) btn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            if (textEl) textEl.innerText = 'Menghapus...';
+            if (loader) loader.classList.remove('hidden');
+
+            const productId = pendingDeleteProductId;
+            const res = await apiCall('delete_product', { id_produk: productId });
+
+            isDeletingProduct = false;
+            if (btn) btn.disabled = false;
+            if (cancelBtn) cancelBtn.disabled = false;
+            if (textEl) textEl.innerText = 'Hapus Produk';
+            if (loader) loader.classList.add('hidden');
+
+            if (res.success) {
+                document.getElementById('deleteProductModal')?.classList.add('hidden');
+                pendingDeleteProductId = null;
+                showGlobalAlert(res.message || 'Produk berhasil dihapus.', true);
+                await fetchDashboardData();
+            } else {
+                showGlobalAlert(res.message || 'Gagal menghapus produk.', false);
+            }
         }
 
         // ==========================================
@@ -2007,12 +2153,6 @@
             if (res.success) { closeModal('userModal'); showGlobalAlert(res.message, true); fetchUsersData(); } else alert(res.message);
         });
 
-        async function deleteUser(id) {
-            if (!confirm("Yakin hapus akun kasir ini secara permanen?")) return;
-            const res = await apiCall('delete_user', { target_user_id: id });
-            if (res.success) fetchUsersData(); else alert(res.message);
-        }
-
         document.getElementById('settingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSaveSetText');
@@ -2213,14 +2353,49 @@
             let uang = method === 'Cash' ? parseInt(document.getElementById('coUangDiterima').value) || 0 : posGrandTotal;
             let change = uang - posGrandTotal;
             if (method === 'Cash' && change < 0) return alert("Uang pembayaran kurang!");
+            if (cart.length === 0) return alert("Keranjang kosong!");
 
-            document.getElementById('btnSubmitCheckout').innerText = "Memproses...";
-            let detail = JSON.stringify(cart.map(c => `${c.name} (${c.qty}${c.unit || 'pcs'})`));
+            const btn = document.getElementById('btnSubmitCheckout');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mencetak...`;
+            btn.disabled = true;
+
+            const buyer = document.getElementById('coNama').value || 'Pelanggan POS';
+
+            // 1. INSTANT PRINT (Tampilkan dialog cetak SEKETIKA tanpa nunggu server)
+            let localOrderId = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+            if (currentUser.logo && currentUser.logo !== '') {
+                document.getElementById('strLogoImg').src = currentUser.logo;
+                document.getElementById('strLogoContainer').style.display = 'block';
+            } else {
+                document.getElementById('strLogoContainer').style.display = 'none';
+            }
+            document.getElementById('strNamaToko').innerText = (currentUser.nama_toko || 'NAMA TOKO').toUpperCase();
+            document.getElementById('strInfoToko').innerText = "Admin: " + currentUser.username + " | WA: " + (currentUser.wa_number || '-');
+            document.getElementById('strOrderId').innerText = localOrderId;
+            document.getElementById('strDate').innerText = new Date().toLocaleString('id-ID');
+            document.getElementById('strKasir').innerText = currentUser.username;
+            document.getElementById('strPelanggan').innerText = buyer;
+            document.getElementById('strSubtotal').innerText = formatRupiah(posSubtotal);
+            document.getElementById('strOngkir').innerText = formatRupiah(posOngkirCost);
+            document.getElementById('strDiskon').innerText = '-' + formatRupiah(posDiskonVal);
+            if (posPpnVal > 0) { document.getElementById('strPpnRow').style.display = 'flex'; document.getElementById('strPpn').innerText = formatRupiah(posPpnVal); } else { document.getElementById('strPpnRow').style.display = 'none'; }
+            if (posServiceVal > 0) { document.getElementById('strServiceRow').style.display = 'flex'; document.getElementById('strService').innerText = formatRupiah(posServiceVal); } else { document.getElementById('strServiceRow').style.display = 'none'; }
+            document.getElementById('strTotal').innerText = formatRupiah(posGrandTotal);
+            document.getElementById('strMethod').innerText = method; document.getElementById('strTunai').innerText = formatRupiah(uang); document.getElementById('strKembali').innerText = formatRupiah(change);
+            document.getElementById('strItems').innerHTML = cart.map(c => `<div style="display:flex; justify-content:space-between; font-size:11px;"><span>${c.name} (${c.qty})</span><span>${formatRupiah(c.price * c.qty)}</span></div>`).join('');
             
+            // Panggil Jendela Print (Membekukan layar sementara sampai print selesai)
+            window.print();
+
+            // 2. LANJUT KIRIM DATA KE SERVER (Proses Background)
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Menyimpan...`;
+            
+            let detail = JSON.stringify(cart.map(c => `${c.name} (${c.qty}${c.unit || 'pcs'})`));
             let apiItemsArr = cart.map(c => ({ id: c.id, variant_id: c.variant_id || null, name: c.name, qty: c.qty, unit: c.unit || 'pcs' }));
 
             const payload = {
-                nama_pembeli: document.getElementById('coNama').value || 'Pelanggan POS',
+                nama_pembeli: buyer,
                 total_belanja: posGrandTotal,
                 status: 'Selesai',
                 detail_items: detail,
@@ -2236,31 +2411,20 @@
                 biaya_layanan: posServiceVal
             };
 
-            const res = await apiCall('add_order', payload);
-            if (res.success) {
-                document.getElementById('strNamaToko').innerText = (currentUser.nama_toko || 'NAMA TOKO').toUpperCase();
-                document.getElementById('strInfoToko').innerText = "Admin: " + currentUser.username + " | WA: " + (currentUser.wa_number || '-');
-                document.getElementById('strOrderId').innerText = res.order_id;
-                document.getElementById('strDate').innerText = new Date().toLocaleString('id-ID');
-                document.getElementById('strKasir').innerText = currentUser.username;
-                document.getElementById('strPelanggan').innerText = payload.nama_pembeli;
-                document.getElementById('strSubtotal').innerText = formatRupiah(posSubtotal);
-                document.getElementById('strOngkir').innerText = formatRupiah(posOngkirCost);
-                document.getElementById('strDiskon').innerText = '-' + formatRupiah(posDiskonVal);
-                if (posPpnVal > 0) { document.getElementById('strPpnRow').style.display = 'flex'; document.getElementById('strPpn').innerText = formatRupiah(posPpnVal); } else { document.getElementById('strPpnRow').style.display = 'none'; }
-                if (posServiceVal > 0) { document.getElementById('strServiceRow').style.display = 'flex'; document.getElementById('strService').innerText = formatRupiah(posServiceVal); } else { document.getElementById('strServiceRow').style.display = 'none'; }
-                document.getElementById('strTotal').innerText = formatRupiah(posGrandTotal);
-                document.getElementById('strMethod').innerText = method; document.getElementById('strTunai').innerText = formatRupiah(uang); document.getElementById('strKembali').innerText = formatRupiah(change);
-                document.getElementById('strItems').innerHTML = cart.map(c => `<div style="display:flex; justify-content:space-between; font-size:11px;"><span>${c.name} (${c.qty})</span><span>${formatRupiah(c.price * c.qty)}</span></div>`).join('');
-                
-                showGlobalAlert("✅ Pesanan Kasir Berhasil Disimpan!", true);
-                closeModal('checkoutModal'); clearCart();
-                await fetchDashboardData(); switchView('order');
-                document.getElementById('btnSubmitCheckout').innerText = "Konfirmasi & Cetak";
-                setTimeout(() => window.print(), 500);
-            } else {
-                alert("Gagal memproses pesanan.");
-                document.getElementById('btnSubmitCheckout').innerText = "Konfirmasi & Cetak";
+            try {
+                const res = await apiCall('add_order', payload);
+                if (res.success) {
+                    showGlobalAlert("✅ Pesanan Kasir Berhasil Disimpan!", true);
+                    closeModal('checkoutModal'); clearCart();
+                    await fetchDashboardData(); switchView('order');
+                } else {
+                    alert("Gagal memproses pesanan ke database.");
+                }
+            } catch(e) {
+                console.error("Error Checkout POS: ", e);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
